@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soundbar-keeper"
+version = "0.1.0"
+description = "Utilitario para Windows que mantem soundbars Bluetooth ativas com um tom quase inaudivel."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "Camila Goulart Soares" }
+]
+keywords = ["windows", "bluetooth", "audio", "soundbar", "tray"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Win32 (MS Windows)",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Sound/Audio",
+  "Topic :: System :: Hardware"
+]
+dependencies = [
+  "numpy>=2.0,<3.0",
+  "sounddevice>=0.5,<1.0",
+  "pystray>=0.19,<1.0",
+  "Pillow>=10.0,<12.0"
+]
+
+[project.scripts]
+soundbar-keeper = "soundbar_keeper.main:main"
+
+[project.urls]
+Homepage = "https://github.com/camilagoulartsoares/soundbar-keeper"
+Repository = "https://github.com/camilagoulartsoares/soundbar-keeper"
+Issues = "https://github.com/camilagoulartsoares/soundbar-keeper/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
