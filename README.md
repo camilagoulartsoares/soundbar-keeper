@@ -1,25 +1,27 @@
 # Soundbar Keeper
 
-Utilitário para Windows que mantém soundbars Bluetooth ativas enviando um fluxo de áudio quase inaudível apenas quando o dispositivo configurado estiver selecionado como saída padrão do sistema.
+Utilitario para Windows que mantem soundbars Bluetooth ativas enviando um fluxo de audio continuo em WASAPI compartilhado apenas quando o dispositivo configurado estiver selecionado como saida padrao do sistema.
 
-![GIF de demonstração placeholder](assets/screenshots/demo-placeholder.gif)
+![GIF de demonstracao placeholder](assets/screenshots/demo-placeholder.gif)
 ![Captura da bandeja placeholder](assets/screenshots/tray-placeholder.png)
 
-## Descrição do projeto
+## Descricao do projeto
 
-Muitas soundbars Bluetooth entram automaticamente em modo de espera quando passam algum tempo sem receber áudio. O Soundbar Keeper foi criado para evitar esse comportamento enviando um tom de alta frequência, praticamente inaudível, com volume extremamente baixo, somente quando a soundbar desejada estiver ativa no Windows.
+Muitas soundbars Bluetooth entram automaticamente em modo de espera quando passam algum tempo sem receber audio. O Soundbar Keeper evita esse comportamento usando um stream continuo e extremamente baixo, herdado da logica da V6, somente quando a soundbar desejada estiver ativa no Windows.
 
 ## Problema que resolve
 
-O projeto reduz a frustração causada por soundbars que desligam sozinhas entre notificações, pausas curtas ou momentos de silêncio. Em vez de manter áudio audível tocando continuamente, o aplicativo usa um sinal discreto para ajudar a preservar a conexão e manter o equipamento acordado.
+O projeto reduz a frustracao causada por soundbars que desligam sozinhas entre notificacoes, pausas curtas ou momentos de silencio. Em vez de depender de musica tocando o tempo todo, o aplicativo mantem um fluxo discreto para ajudar a preservar a conexao e evitar standby por ausencia de audio.
 
 ## Como funciona
 
 1. O app inicia em segundo plano.
-2. Ele observa qual é a saída padrão de áudio do Windows.
-3. Quando a saída corresponde à soundbar configurada, o app inicia um stream com um tom em torno de `17.5 kHz`.
-4. Quando outro dispositivo é selecionado, o stream é pausado automaticamente.
-5. Se a soundbar voltar a ser a saída padrão, o keep-alive é retomado.
+2. Ele observa qual e a saida padrao de audio do Windows.
+3. Quando a saida corresponde a soundbar configurada, o app inicia um stream estereo continuo e muito baixo.
+4. O sinal usa multiplas frequencias suaves e um envelope leve para reduzir a chance de o firmware interpretar o fluxo como silencio.
+5. Um watchdog monitora o callback de audio e tenta reabrir o stream se outro app interromper o fluxo.
+6. Quando outro dispositivo e selecionado, o stream e pausado automaticamente.
+7. Se a soundbar voltar a ser a saida padrao, o keep-alive e retomado.
 
 ## Tecnologias utilizadas
 
@@ -35,7 +37,7 @@ O projeto reduz a frustração causada por soundbars que desligam sozinhas entre
 - Python 3.11 ou superior
 - Uma soundbar Bluetooth cujo nome possa ser identificado pelo Windows
 
-## Instalação
+## Instalacao
 
 ```powershell
 git clone https://github.com/camilagoulartsoares/soundbar-keeper.git
@@ -46,31 +48,37 @@ python -m pip install --upgrade pip
 python -m pip install -e .
 ```
 
-## Execução
+## Execucao
 
 ```powershell
 python -m soundbar_keeper
 ```
 
-Após iniciar, o aplicativo permanece em segundo plano e exibe um ícone na bandeja do sistema.
+Apos iniciar, o aplicativo permanece em segundo plano, exibe um icone na bandeja do sistema e bloqueia multiplas instancias simultaneas.
 
 ## Como configurar
 
-Na primeira execução, o Soundbar Keeper cria automaticamente um arquivo JSON em:
+Na primeira execucao, o Soundbar Keeper cria automaticamente um arquivo JSON em:
 
 ```text
-%APPDATA%\SoundbarKeeper\config.json
+%LOCALAPPDATA%\SoundbarKeeper\config.json
 ```
 
-Exemplo de configuração:
+Se existir uma configuracao antiga em `%LOCALAPPDATA%\SoundbarKeeperV6\config.json`, ela sera migrada automaticamente.
+
+Exemplo de configuracao:
 
 ```json
 {
-  "device_name_patterns": ["Philips TAB4000"],
+  "device_name_patterns": ["Philips", "TAB4000"],
   "tone_frequency_hz": 17500.0,
-  "volume": 0.0005,
-  "sample_rate_hz": 44100,
+  "frequencies_hz": [180.0, 420.0, 950.0, 2200.0],
+  "volume": 0.00035,
+  "sample_rate_hz": 48000,
+  "block_size": 960,
+  "watchdog_seconds": 2.0,
   "check_interval_seconds": 3.0,
+  "keep_pc_awake": true,
   "auto_start_with_windows": true,
   "start_paused": false,
   "log_level": "INFO"
@@ -80,16 +88,26 @@ Exemplo de configuração:
 Campos importantes:
 
 - `device_name_patterns`: lista de nomes ou trechos de nomes que identificam a soundbar.
-- `tone_frequency_hz`: frequência do tom de keep-alive.
-- `volume`: amplitude do tom. Valores muito baixos são recomendados.
-- `check_interval_seconds`: intervalo entre verificações da saída padrão.
-- `auto_start_with_windows`: controla a inicialização automática.
+- `frequencies_hz`: frequencias usadas no fluxo continuo da V6.
+- `volume`: amplitude base do sinal. Valores muito baixos sao recomendados.
+- `sample_rate_hz`: taxa de amostragem preferida.
+- `block_size`: tamanho do bloco de audio.
+- `watchdog_seconds`: tempo maximo sem callback antes de reiniciar o stream.
+- `check_interval_seconds`: intervalo entre verificacoes da saida padrao.
+- `keep_pc_awake`: evita idle de sistema enquanto o app estiver ativo.
+- `auto_start_with_windows`: controla a inicializacao automatica.
 
-Você também pode abrir o arquivo de configuração diretamente pelo menu do ícone na bandeja.
+Voce tambem pode abrir o arquivo de configuracao diretamente pelo menu do icone na bandeja.
+
+Para descobrir o nome exato do dispositivo de audio:
+
+```powershell
+python -m soundbar_keeper --list-devices
+```
 
 ## Como instalar automaticamente
 
-Para instalar o pacote e registrar a inicialização com o Windows:
+Para instalar o pacote e registrar a inicializacao com o Windows:
 
 ```powershell
 installer\install.bat
@@ -97,13 +115,13 @@ installer\install.bat
 
 O script:
 
-- instala o projeto em modo editável
+- instala o projeto em modo editavel
 - registra o aplicativo na pasta Startup do Windows
-- deixa o comando pronto para execução local
+- deixa o comando pronto para execucao local
 
 ## Como remover
 
-Para remover a inicialização automática e desinstalar o pacote:
+Para remover a inicializacao automatica e desinstalar o pacote:
 
 ```powershell
 installer\uninstall.bat
@@ -114,48 +132,49 @@ installer\uninstall.bat
 Os logs ficam em:
 
 ```text
-%APPDATA%\SoundbarKeeper\logs\
+%LOCALAPPDATA%\SoundbarKeeper\logs\
 ```
 
 ## Estrutura do projeto
 
 ```text
 soundbar-keeper/
-├── assets/
-├── docs/
-├── installer/
-├── src/
-│   └── soundbar_keeper/
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── LICENSE
-├── README.md
-├── pyproject.toml
-└── requirements.txt
+|-- assets/
+|-- docs/
+|-- installer/
+|-- src/
+|   `-- soundbar_keeper/
+|-- CHANGELOG.md
+|-- CONTRIBUTING.md
+|-- LICENSE
+|-- README.md
+|-- pyproject.toml
+`-- requirements.txt
 ```
 
-## Limitações
+## Limitacoes
 
-- O projeto depende do nome do dispositivo informado pelo Windows e acessível ao Python.
-- Nem toda soundbar responde da mesma forma a sinais de alta frequência em volume muito baixo.
-- A detecção da troca de dispositivo padrão é feita por verificação periódica, não por evento nativo do Windows.
-- O app foi pensado para Windows e não pretende suportar Linux ou macOS.
+- O projeto depende do nome do dispositivo informado pelo Windows e acessivel ao Python.
+- Nem toda soundbar responde da mesma forma ao perfil de audio continuo da V6.
+- A deteccao da troca de dispositivo padrao e feita por verificacao periodica, nao por evento nativo do Windows.
+- O watchdog reduz falhas causadas por outros apps, mas nao consegue vencer um temporizador fisico interno da propria soundbar.
+- O app foi pensado para Windows e nao pretende suportar Linux ou macOS.
 
-## Licença
+## Licenca
 
-Distribuído sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE).
+Distribuido sob a licenca MIT. Consulte o arquivo [LICENSE](LICENSE).
 
-## Contribuição
+## Contribuicao
 
-Contribuições são bem-vindas. Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para orientações de desenvolvimento e testes manuais recomendados.
+Contribuicoes sao bem-vindas. Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para orientacoes de desenvolvimento e testes manuais recomendados.
 
 ## Roadmap
 
-- Interface gráfica (GUI)
+- Interface grafica (GUI)
 - Instalador (.exe)
-- Atualizador automático
-- Configuração de frequência
-- Configuração de volume
-- Seleção de dispositivo
-- Múltiplas soundbars
-- Estatísticas de funcionamento
+- Atualizador automatico
+- Configuracao de frequencia
+- Configuracao de volume
+- Selecao de dispositivo
+- Multiplas soundbars
+- Estatisticas de funcionamento

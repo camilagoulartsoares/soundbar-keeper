@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "soundbar-keeper"
-version = "0.1.0"
-description = "Utilitario para Windows que mantem soundbars Bluetooth ativas com um tom quase inaudivel."
+version = "0.6.0"
+description = "Utilitario para Windows que mantem soundbars Bluetooth ativas com audio continuo em WASAPI compartilhado."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

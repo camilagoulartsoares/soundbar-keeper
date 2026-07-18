@@ -10,7 +10,7 @@ from .devices import get_default_output_device, list_output_devices, matches_tar
 from .logger import configure_logging
 from .resources import CONFIG_PATH, LOGS_DIR
 from .tray import SystemTray
-from .windows import WindowsStartupManager, open_path
+from .windows import SingleInstanceGuard, WindowsPowerManager, WindowsStartupManager, open_path
 
 
 class SoundbarKeeperApp:
@@ -20,6 +20,8 @@ class SoundbarKeeperApp:
         self._config = self._config_manager.load()
         self._logger = configure_logging(self._config.log_level)
         self._startup_manager = WindowsStartupManager()
+        self._single_instance = SingleInstanceGuard()
+        self._power_manager = WindowsPowerManager()
         self._audio = KeepAliveAudio(self._config, self._logger)
         self._tray = SystemTray(self)
         self._stop_event = threading.Event()
@@ -33,6 +35,10 @@ class SoundbarKeeperApp:
         self._status_text = "Inicializando"
 
     def run(self) -> None:
+        if not self._single_instance.acquire():
+            self._logger.warning("Outra instancia do Soundbar Keeper ja esta em execucao.")
+            return
+
         self._apply_startup_configuration()
         self._log_output_devices()
         self._monitor_thread.start()
@@ -44,6 +50,7 @@ class SoundbarKeeperApp:
             self.shutdown()
             if self._monitor_thread.is_alive():
                 self._monitor_thread.join(timeout=2)
+            self._single_instance.release()
 
     def shutdown(self) -> None:
         if self._stop_event.is_set():
@@ -52,6 +59,7 @@ class SoundbarKeeperApp:
         self._logger.info("Encerrando o aplicativo.")
         self._stop_event.set()
         self._audio.stop()
+        self._power_manager.refresh(False)
 
     def open_config(self) -> None:
         open_path(CONFIG_PATH)
@@ -104,6 +112,8 @@ class SoundbarKeeperApp:
                 if refreshed_config is not None:
                     self._handle_config_reload(refreshed_config)
 
+                self._power_manager.refresh(self._config.keep_pc_awake and not self.is_paused())
+
                 if self.is_paused():
                     self._audio.stop()
                     self._set_status("Pausado manualmente")
@@ -126,6 +136,12 @@ class SoundbarKeeperApp:
             return
 
         if matches_target_device(device, self._config.device_name_patterns):
+            if self._audio.is_callback_stale(self._config.watchdog_seconds):
+                self._logger.warning("Watchdog detectou stream travado em '%s'. Reiniciando.", device.name)
+                self._audio.start(device, force_restart=True)
+                self._set_status(f"Recuperando audio em {device.name}")
+                return
+
             self._audio.start(device)
             self._set_status(f"Ativo em {device.name}")
             return
@@ -173,6 +189,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--install-startup", action="store_true", help="Registra o app na inicializacao do Windows.")
     parser.add_argument("--uninstall-startup", action="store_true", help="Remove o app da inicializacao do Windows.")
     parser.add_argument("--print-config-path", action="store_true", help="Exibe o caminho do arquivo de configuracao.")
+    parser.add_argument("--list-devices", action="store_true", help="Lista os dispositivos de saida disponiveis.")
     return parser
 
 
@@ -190,6 +207,15 @@ def main() -> None:
 
     if args.print_config_path:
         print(CONFIG_PATH)
+        return
+
+    if args.list_devices:
+        logger = configure_logging("INFO")
+        for device in list_output_devices(logger=logger):
+            print(
+                f"index={device.index} | name={device.name} | hostapi={device.hostapi} | "
+                f"channels={device.max_output_channels} | sample_rate={device.default_samplerate}"
+            )
         return
 
     app = SoundbarKeeperApp()
