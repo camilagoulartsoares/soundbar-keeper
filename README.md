@@ -2,9 +2,6 @@
 
 Utilitario para Windows que mantem soundbars Bluetooth ativas enviando um fluxo de audio continuo em WASAPI compartilhado apenas quando o dispositivo configurado estiver selecionado como saida padrao do sistema.
 
-![GIF de demonstracao placeholder](assets/screenshots/demo-placeholder.gif)
-![Captura da bandeja placeholder](assets/screenshots/tray-placeholder.png)
-
 ## Descricao do projeto
 
 Muitas soundbars Bluetooth entram automaticamente em modo de espera quando passam algum tempo sem receber audio. O Soundbar Keeper evita esse comportamento usando um stream continuo e extremamente baixo, herdado da logica da V6, somente quando a soundbar desejada estiver ativa no Windows.
