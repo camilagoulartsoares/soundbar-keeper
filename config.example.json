@@ -1,0 +1,67 @@
+{
+  "version": 9,
+  "device": {
+    "keywords": ["Philips", "TAB4000"],
+    "prefer_wasapi": true,
+    "sample_rate": 48000,
+    "channels": 2,
+    "block_size": 480,
+    "latency": "high"
+  },
+  "audio": {
+    "shared_mode": true,
+    "dtype": "float32",
+    "keep_stream_open": true
+  },
+  "pulse": {
+    "duration_ms_min": 3.0,
+    "duration_ms_max": 6.0,
+    "interval_seconds_min": 3.0,
+    "interval_seconds_max": 5.0,
+    "frequency_hz_min": 18000.0,
+    "frequency_hz_max": 19200.0,
+    "envelope": "blackman"
+  },
+  "adaptive_mode": {
+    "enabled": true,
+    "resume_after_silence_seconds": 3.0
+  },
+  "random_frequency": true,
+  "amplitude_dbfs": {
+    "minimum": -78.0,
+    "current": -72.0,
+    "maximum": -54.0,
+    "steps": [-78.0, -72.0, -66.0, -60.0, -54.0]
+  },
+  "audio_detection": {
+    "enabled": true,
+    "activate_threshold": 0.0015,
+    "release_threshold": 0.0007,
+    "attack_seconds": 0.15,
+    "release_seconds": 3.0,
+    "poll_interval_seconds": 0.05,
+    "ignore_pulse_window_seconds": 0.2
+  },
+  "watchdog": {
+    "poll_interval_seconds": 0.5,
+    "callback_stall_seconds": 6.0,
+    "resume_gap_seconds": 15.0,
+    "backoff_seconds": [1, 2, 4, 8, 15]
+  },
+  "startup": {
+    "ensure_task": true,
+    "task_delay_seconds": 10
+  },
+  "tray": {
+    "enabled": true,
+    "show_notifications": false
+  },
+  "debug": {
+    "log_device_scan": true,
+    "log_audio_detector": false
+  },
+  "logging": {
+    "max_bytes": 262144,
+    "backup_count": 3
+  }
+}

@@ -1,0 +1,7 @@
+numpy
+sounddevice
+pycaw
+comtypes
+Pillow
+pystray
+pyinstaller
